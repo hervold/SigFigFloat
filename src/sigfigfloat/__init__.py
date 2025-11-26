@@ -1,25 +1,27 @@
 import math
-from functools import total_ordering
 
 
-@total_ordering
 class SigFigFloat:
     figs = 3
-    orig_val = float("nan")
-    rounded = float("nan")
-    scale = -1
-    epsilon = float("nan")
+    orig_val = math.nan
+    rounded = math.nan
+    scale = math.nan
+    epsilon = math.nan
 
     @staticmethod
     def get_scale(val):
         if val == 0.0:
             return 0.0
+        if math.isnan(val):
+            return math.nan
         return 10 ** (math.floor(math.log10(abs(float(val)))))
 
     @staticmethod
     def round_to_sig_figs(val, scale, figs):
         if val == 0.0:
             return 0.0
+        if math.isnan(val):
+            return math.nan
         # round the scaled number and then scale it back
         return round(float(val / scale), figs - 1) * scale
 
@@ -70,6 +72,8 @@ class SigFigFloat:
         return SigFigFloat(self.orig_val**e2, self.figs)
 
     def __str__(self):
+        if math.isnan(self.scale):
+            return "nan"
         if self.scale < 0.001 or (
             self.scale > 1e4 and math.log10(self.scale) > self.figs
         ):
@@ -96,6 +100,14 @@ class SigFigFloat:
         )
         return self.orig_val < rounded_o
 
+    def __gt__(self, o):
+        rounded_o = (
+            o.rounded
+            if isinstance(o, SigFigFloat)
+            else SigFigFloat.round_to_sig_figs(o, self.scale, self.figs)
+        )
+        return self.orig_val > rounded_o
+
     def __eq__(self, o):
         rounded_o = (
             o.rounded
@@ -103,6 +115,12 @@ class SigFigFloat:
             else SigFigFloat.round_to_sig_figs(o, self.scale, self.figs)
         )
         return abs(self.rounded - rounded_o) < self.epsilon
+
+    def __le__(self, o):
+        return (self < o) or (self == o)
+
+    def __ge__(self, o):
+        return (self > o) or (self == o)
 
     def __float__(self):
         return float(self.orig_val)
